@@ -67,20 +67,19 @@ app.use((req, res, next) => {
   next()
 })
 
-// Android Digital Asset Links verification endpoints (Android App Links)
+// Android Digital Asset Links verification endpoint (Android App Links)
 const serveAssetLinks = (req, res) => {
-  const assetLinksCandidates = [
-    path.resolve(__dirname, '../public/.well-known/assetlinks.json'),
-    path.resolve(__dirname, '../public/.wellknown/assets-link.json'),
-    path.resolve(__dirname, '../dist/.well-known/assetlinks.json'),
-    path.resolve(__dirname, '../dist/.wellknown/assets-link.json'),
-  ]
+  const assetLinksPath = path.resolve(__dirname, '../public/.well-known/assetlinks.json')
+  const distAssetLinksPath = path.resolve(__dirname, '../dist/.well-known/assetlinks.json')
 
-  for (const candidate of assetLinksCandidates) {
-    if (fs.existsSync(candidate)) {
-      res.setHeader('Content-Type', 'application/json')
-      return res.sendFile(candidate)
-    }
+  if (fs.existsSync(assetLinksPath)) {
+    res.setHeader('Content-Type', 'application/json')
+    return res.sendFile(assetLinksPath)
+  }
+
+  if (fs.existsSync(distAssetLinksPath)) {
+    res.setHeader('Content-Type', 'application/json')
+    return res.sendFile(distAssetLinksPath)
   }
 
   res.setHeader('Content-Type', 'application/json')
@@ -89,8 +88,20 @@ const serveAssetLinks = (req, res) => {
       relation: ['delegate_permission/common.handle_all_urls'],
       target: {
         namespace: 'android_app',
+        package_name: 'com.example.humsafar',
+        sha256_cert_fingerprints: [
+          '7F:47:04:22:EF:98:91:A0:7B:DA:41:84:C6:E8:F8:8A:C5:FD:DC:A1:EF:2D:07:2B:A3:A1:1A:45:16:AD:7E:88',
+          '14:6D:E9:7C:0F:CD:CF:06:EB:CE:53:E4:70:C6:6F:09:47:19:D9:6F:29:43:E4:39:69:B0:1B:77:E5:C5:3C:99',
+        ],
+      },
+    },
+    {
+      relation: ['delegate_permission/common.handle_all_urls'],
+      target: {
+        namespace: 'android_app',
         package_name: 'com.dharohar.app',
         sha256_cert_fingerprints: [
+          '7F:47:04:22:EF:98:91:A0:7B:DA:41:84:C6:E8:F8:8A:C5:FD:DC:A1:EF:2D:07:2B:A3:A1:1A:45:16:AD:7E:88',
           '14:6D:E9:7C:0F:CD:CF:06:EB:CE:53:E4:70:C6:6F:09:47:19:D9:6F:29:43:E4:39:69:B0:1B:77:E5:C5:3C:99',
         ],
       },
@@ -98,12 +109,7 @@ const serveAssetLinks = (req, res) => {
   ])
 }
 
-app.get([
-  '/.well-known/assetlinks.json',
-  '/.well-known/assets-link.json',
-  '/.wellknown/assets-link.json',
-  '/.wellknown/assetlinks.json',
-], serveAssetLinks)
+app.get('/.well-known/assetlinks.json', serveAssetLinks)
 
 // Serve production static assets (JS, CSS, images, etc.)
 if (fs.existsSync(distPath)) {
