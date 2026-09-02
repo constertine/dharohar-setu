@@ -67,9 +67,47 @@ app.use((req, res, next) => {
   next()
 })
 
+// Android Digital Asset Links verification endpoints (Android App Links)
+const serveAssetLinks = (req, res) => {
+  const assetLinksCandidates = [
+    path.resolve(__dirname, '../public/.well-known/assetlinks.json'),
+    path.resolve(__dirname, '../public/.wellknown/assets-link.json'),
+    path.resolve(__dirname, '../dist/.well-known/assetlinks.json'),
+    path.resolve(__dirname, '../dist/.wellknown/assets-link.json'),
+  ]
+
+  for (const candidate of assetLinksCandidates) {
+    if (fs.existsSync(candidate)) {
+      res.setHeader('Content-Type', 'application/json')
+      return res.sendFile(candidate)
+    }
+  }
+
+  res.setHeader('Content-Type', 'application/json')
+  return res.json([
+    {
+      relation: ['delegate_permission/common.handle_all_urls'],
+      target: {
+        namespace: 'android_app',
+        package_name: 'com.dharohar.app',
+        sha256_cert_fingerprints: [
+          '14:6D:E9:7C:0F:CD:CF:06:EB:CE:53:E4:70:C6:6F:09:47:19:D9:6F:29:43:E4:39:69:B0:1B:77:E5:C5:3C:99',
+        ],
+      },
+    },
+  ])
+}
+
+app.get([
+  '/.well-known/assetlinks.json',
+  '/.well-known/assets-link.json',
+  '/.wellknown/assets-link.json',
+  '/.wellknown/assetlinks.json',
+], serveAssetLinks)
+
 // Serve production static assets (JS, CSS, images, etc.)
 if (fs.existsSync(distPath)) {
-  app.use(express.static(distPath))
+  app.use(express.static(distPath, { dotfiles: 'allow' }))
 }
 
 // Mount API Routes

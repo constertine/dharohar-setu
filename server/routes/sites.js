@@ -278,6 +278,41 @@ router.get('/scan/:qr_value', async (req, res, next) => {
       }
     }
 
+    // 6. Acronym / Prefix matching fallback (e.g. IIITS-0-KING -> IIIT Sonepat, QMC-0 -> Qutub Minar)
+    const prefixMatch = qrValue.match(/^([A-Za-z]+)-/i)
+    if (prefixMatch) {
+      const prefix = prefixMatch[1].toUpperCase()
+      try {
+        const [matchedSite] = await backendDb.$queryRawUnsafe(`
+          SELECT s.*,
+                 (SELECT COUNT(*)::int FROM nodes n WHERE n.site_id = s.id) as nodes_count,
+                 (SELECT image_url FROM site_images si WHERE si.site_id = s.id LIMIT 1) as image_url
+          FROM heritage_sites s
+          WHERE s.name ILIKE '%${prefix}%'
+             OR REPLACE(REPLACE(s.name, ' ', ''), '.', '') ILIKE '%${prefix}%'
+             OR s.summary ILIKE '%${prefix}%'
+          ORDER BY s.id ASC
+          LIMIT 1
+        `)
+        if (matchedSite) {
+          return res.json({
+            valid: true,
+            status: 'valid',
+            type: qrValue.toLowerCase().includes('king') ? 'site_entry' : 'node_waypoint',
+            site_id: matchedSite.id,
+            site_name: matchedSite.name,
+            site_location: matchedSite.location,
+            summary: matchedSite.summary,
+            image_url: matchedSite.image_url || '/assets/app-preview-7.jpg',
+            node_id: qrValue,
+            node_name: qrValue.toLowerCase().includes('king') ? 'Main Entrance Gate' : `Checkpoint ${qrValue}`,
+            node_type: qrValue.toLowerCase().includes('king') ? 'king' : 'standard',
+            message: `Welcome to ${matchedSite.name}. Mapped site resolved for waypoint '${qrValue}'.`,
+          })
+        }
+      } catch {}
+    }
+
     return res.status(404).json({
       valid: false,
       status: 'invalid',

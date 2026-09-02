@@ -83,10 +83,11 @@ const FALLBACK_SITES = [
 
 const INITIAL_LIMIT = 2
 
-export default function Sites() {
+export default function Sites({ initialNodeId }) {
   const [sites, setSites] = useState(FALLBACK_SITES)
   const [query, setQuery] = useState('')
   const [selectedSite, setSelectedSite] = useState(null)
+  const [activeNodeMarker, setActiveNodeMarker] = useState(initialNodeId || null)
   const [scanOpen, setScanOpen] = useState(false)
   const [qrValue, setQrValue] = useState('')
   const [showAll, setShowAll] = useState(false)
@@ -120,6 +121,76 @@ export default function Sites() {
     fetchSites()
   }, [])
 
+  // Resolve deep-linked node (e.g. /node/IIITS-0-KING) to its mapped heritage site
+  useEffect(() => {
+    if (!initialNodeId) return
+
+    const cleanNode = initialNodeId.replace(/^.*\/node\//, '').trim()
+    if (!cleanNode) return
+
+    setActiveNodeMarker(cleanNode)
+
+    async function resolveNodeToSite() {
+      const cleanLower = cleanNode.toLowerCase()
+
+      // 1. Check local loaded sites
+      const localMatch = sites.find((s) => {
+        const sQr = (s.qr_value || '').toLowerCase()
+        const sName = (s.name || '').toLowerCase()
+        return (
+          sQr === cleanLower ||
+          sQr.includes(cleanLower) ||
+          cleanLower.includes(sQr) ||
+          (cleanLower.startsWith('iiit') && sName.includes('iiit')) ||
+          (cleanLower.startsWith('qmc') && sName.includes('qutub')) ||
+          (s.id && cleanLower.startsWith(`site-${s.id}`))
+        )
+      })
+
+      if (localMatch) {
+        setSelectedSite(localMatch)
+        setTimeout(() => {
+          document.getElementById('sites')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }, 150)
+        return
+      }
+
+      // 2. Fetch from backend /sites/scan/:cleanNode
+      try {
+        const res = await fetch(`/sites/scan/${encodeURIComponent(cleanNode)}`)
+        if (res.ok) {
+          const scanData = await res.json()
+          if (scanData.valid && scanData.site_id) {
+            const matchedSite = sites.find(
+              (s) => s.id == scanData.site_id || String(s.id) === String(scanData.site_id)
+            )
+            if (matchedSite) {
+              setSelectedSite(matchedSite)
+            } else {
+              setSelectedSite({
+                id: scanData.site_id,
+                name: scanData.site_name || 'Mapped Heritage Site',
+                location: scanData.site_location || 'India',
+                summary: scanData.summary || scanData.description || scanData.message || 'Mapped digital audio tour waypoint.',
+                nodes_count: scanData.nodes_count || 5,
+                guide_status: 'English active',
+                image: scanData.image_url || '/assets/app-preview-8.jpg',
+                qr_value: cleanNode,
+              })
+            }
+            setTimeout(() => {
+              document.getElementById('sites')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            }, 150)
+          }
+        }
+      } catch (err) {
+        console.warn('Could not resolve scanned node marker:', err)
+      }
+    }
+
+    resolveNodeToSite()
+  }, [initialNodeId, sites])
+
   const results = useMemo(() => {
     const term = query.trim().toLowerCase()
     return term
@@ -135,10 +206,18 @@ export default function Sites() {
   }, [results, query, showAll])
 
   const scannedSite = sites.find((site) => {
-    const clean = qrValue.trim().toLowerCase()
+    let clean = qrValue.trim().toLowerCase()
     if (!clean) return false
+    clean = clean.replace(/^.*\/node\//, '')
     const siteQr = (site.qr_value || '').toLowerCase()
-    return siteQr === clean || (clean.length > 3 && (siteQr.includes(clean) || clean.includes(siteQr))) || (site.id && clean === `site-${site.id}-0`.toLowerCase())
+    const siteName = (site.name || '').toLowerCase()
+    return (
+      siteQr === clean ||
+      (clean.length > 2 && (siteQr.includes(clean) || clean.includes(siteQr))) ||
+      (clean.startsWith('iiit') && siteName.includes('iiit')) ||
+      (clean.startsWith('qmc') && siteName.includes('qutub')) ||
+      (site.id && clean === `site-${site.id}-0`.toLowerCase())
+    )
   })
 
   return (
@@ -179,10 +258,41 @@ export default function Sites() {
               <input
                 value={qrValue}
                 onChange={(event) => setQrValue(event.target.value)}
-                placeholder="Try SITE-1-0 or SITE-2-0"
+                placeholder="Try IIITS-0-KING or SITE-1-0"
                 aria-label="QR marker value"
               />
-              <button type="button" onClick={() => scannedSite && setSelectedSite(scannedSite)}>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (scannedSite) {
+                    setSelectedSite(scannedSite)
+                    return
+                  }
+                  const clean = qrValue.trim().replace(/^.*\/node\//, '')
+                  if (!clean) return
+                  try {
+                    const res = await fetch(`/sites/scan/${encodeURIComponent(clean)}`)
+                    if (res.ok) {
+                      const data = await res.json()
+                      if (data.valid && data.site_id) {
+                        const m = sites.find((s) => s.id == data.site_id)
+                        setSelectedSite(
+                          m || {
+                            id: data.site_id,
+                            name: data.site_name,
+                            location: data.site_location || 'India',
+                            summary: data.summary || data.description || 'Mapped heritage site.',
+                            nodes_count: data.nodes_count || 5,
+                            guide_status: 'English active',
+                            qr_value: clean,
+                          }
+                        )
+                        setActiveNodeMarker(clean)
+                      }
+                    }
+                  } catch {}
+                }}
+              >
                 Open site
               </button>
             </div>
@@ -268,6 +378,26 @@ export default function Sites() {
             <div className="site-modal-header">
               <div className="eyebrow">Mapped site</div>
               <h3 id="site-modal-title">{selectedSite.name}</h3>
+              {activeNodeMarker && (
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: 'rgba(156, 74, 44, 0.08)',
+                    color: '#9C4A2C',
+                    border: '1px solid rgba(156, 74, 44, 0.2)',
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    marginTop: '8px',
+                  }}
+                >
+                  <span>📍 Scanned Checkpoint:</span>
+                  <code style={{ fontFamily: 'monospace' }}>{activeNodeMarker}</code>
+                </div>
+              )}
             </div>
 
             <div className="site-modal-body">

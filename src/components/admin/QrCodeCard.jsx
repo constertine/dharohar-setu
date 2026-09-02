@@ -12,16 +12,21 @@ export default function QrCodeCard({
 }) {
   const canvasRef = useRef(null)
   const [dataUrl, setDataUrl] = useState('')
-  const [copied, setCopied] = useState(false)
+  const [copiedCode, setCopiedCode] = useState(false)
+  const [copiedUrl, setCopiedUrl] = useState(false)
 
   const isKing = nodeType === 'king' || sequenceOrder === 1 || value?.includes('-0')
+  const nodeCode = String(value || '').trim()
+  const qrUrl = nodeCode.startsWith('http://') || nodeCode.startsWith('https://')
+    ? nodeCode
+    : `https://dharohar-setu.onrender.com/node/${encodeURIComponent(nodeCode)}`
 
   useEffect(() => {
-    if (!value || !canvasRef.current) return
+    if (!qrUrl || !canvasRef.current) return
 
     QRCode.toCanvas(
       canvasRef.current,
-      value,
+      qrUrl,
       {
         width: 220,
         margin: 2,
@@ -37,13 +42,20 @@ export default function QrCodeCard({
         }
       }
     )
-  }, [value])
+  }, [qrUrl])
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(value)
-    setCopied(true)
-    if (onCopySuccess) onCopySuccess(value)
-    setTimeout(() => setCopied(false), 2000)
+  const handleCopyCode = () => {
+    navigator.clipboard.writeText(nodeCode)
+    setCopiedCode(true)
+    if (onCopySuccess) onCopySuccess(nodeCode)
+    setTimeout(() => setCopiedCode(false), 2000)
+  }
+
+  const handleCopyUrl = () => {
+    navigator.clipboard.writeText(qrUrl)
+    setCopiedUrl(true)
+    if (onCopySuccess) onCopySuccess(qrUrl)
+    setTimeout(() => setCopiedUrl(false), 2000)
   }
 
   const handleDownload = () => {
@@ -99,26 +111,30 @@ export default function QrCodeCard({
 
     // QR Value Box
     ctx.fillStyle = '#F4EFE6'
-    ctx.fillRect(160, 775, 480, 70)
+    ctx.fillRect(100, 765, 600, 95)
     ctx.strokeStyle = '#D9CEBD'
     ctx.lineWidth = 2
-    ctx.strokeRect(160, 775, 480, 70)
+    ctx.strokeRect(100, 765, 600, 95)
 
     ctx.fillStyle = '#1C160C'
-    ctx.font = 'bold 32px monospace'
-    ctx.fillText(value, 400, 820)
+    ctx.font = 'bold 30px monospace'
+    ctx.fillText(nodeCode, 400, 805)
+
+    ctx.fillStyle = '#9E3A14'
+    ctx.font = '500 18px monospace'
+    ctx.fillText(qrUrl, 400, 840)
 
     // Footer instruction
     ctx.fillStyle = '#6E6254'
     ctx.font = '20px sans-serif'
-    ctx.fillText('Scan with Dharohar App to trigger location audio & historical storytelling', 400, 890)
+    ctx.fillText('Scan with Google Lens or Dharohar App to trigger location audio & tour', 400, 895)
     ctx.font = '16px sans-serif'
-    ctx.fillText('dharohar.app • Ministry of Tourism & Culture', 400, 925)
+    ctx.fillText('dharohar-setu.onrender.com • Ministry of Tourism & Culture', 400, 928)
 
     // Download image
     const link = document.createElement('a')
     const sanitizedName = (title || 'qr').toLowerCase().replace(/[^a-z0-9]/g, '-')
-    link.download = `dharohar-${value}-${sanitizedName}.png`
+    link.download = `dharohar-${nodeCode}-${sanitizedName}.png`
     link.href = printCanvas.toDataURL('image/png')
     link.click()
   }
@@ -182,45 +198,71 @@ export default function QrCodeCard({
         <canvas ref={canvasRef} style={{ width: '180px', height: '180px', display: 'block' }} />
       </div>
 
+      {/* Node Code & Deep Link URL */}
       <div
         style={{
           background: '#F4EFE6',
-          padding: '4px 10px',
+          padding: '6px 10px',
           borderRadius: '6px',
           fontFamily: 'monospace',
           fontWeight: 700,
           fontSize: '13px',
           color: 'var(--admin-ink)',
-          marginBottom: '12px',
+          marginBottom: '4px',
           border: '1px solid #D9CEBD',
           letterSpacing: '0.05em',
         }}
       >
-        {value}
+        {nodeCode}
       </div>
 
-      <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+      <div
+        style={{
+          fontSize: '11px',
+          color: '#8C7B6B',
+          fontFamily: 'monospace',
+          wordBreak: 'break-all',
+          marginBottom: '10px',
+          lineHeight: 1.3,
+        }}
+        title={qrUrl}
+      >
+        /node/{nodeCode}
+      </div>
+
+      <div style={{ display: 'flex', gap: '6px', width: '100%' }}>
         <button
           type="button"
           className="btn-admin btn-admin-secondary"
-          style={{ flex: 1, padding: '6px 8px', fontSize: '11.5px' }}
-          onClick={handleCopy}
+          style={{ flex: 1, padding: '6px 4px', fontSize: '11px' }}
+          onClick={handleCopyUrl}
+          title="Copy full URL for Google Lens / deep link"
         >
-          {copied ? '✓ Copied' : '📋 Copy Code'}
+          {copiedUrl ? '✓ Copied' : '🔗 Copy Link'}
+        </button>
+
+        <button
+          type="button"
+          className="btn-admin btn-admin-secondary"
+          style={{ padding: '6px 8px', fontSize: '11px' }}
+          onClick={handleCopyCode}
+          title="Copy node code"
+        >
+          {copiedCode ? '✓' : '📋 Code'}
         </button>
 
         <button
           type="button"
           className="btn-admin btn-admin-primary"
           style={{
-            flex: 1,
-            padding: '6px 8px',
-            fontSize: '11.5px',
+            flex: 1.2,
+            padding: '6px 6px',
+            fontSize: '11px',
             background: isKing ? '#9E3A14' : 'var(--admin-ink)',
           }}
           onClick={handleDownload}
         >
-          ⬇ Download PNG
+          ⬇ Poster PNG
         </button>
       </div>
     </div>

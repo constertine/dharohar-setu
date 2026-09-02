@@ -7,7 +7,6 @@ import SiteLockScreen, { isSiteUnlocked } from './components/SiteLockScreen'
 
 // Public Pages
 import Home from './pages/Home'
-import NodeLandingPage from './pages/NodeLandingPage'
 import NotFoundPage from './pages/NotFoundPage'
 
 // Admin Flow Pages
@@ -34,12 +33,13 @@ import './styles/admin.css'
 function AppRouter({ currentPath, navigate }) {
   const { mustChangePassword } = useAuth()
 
-  // 1. Android App Download / Redirect Fallback Route (/node/:nodeId)
-  // Handles /node/NODE_1, /node/NODE1, /node/ABC_123, /node, /node/
+  // 1. Node Deep Link Route (/node/:node_id e.g. /node/IIITS-0-KING)
+  // When scanned with Google Lens without app installed, redirect directly to the Heritage Sites section
+  // with the mapped site modal open and app download featured.
   const nodeMatch = currentPath.match(/^\/node(?:\/([^/?#]+))?\/?$/)
   if (nodeMatch) {
-    const rawNodeId = nodeMatch[1] ? decodeURIComponent(nodeMatch[1]) : ''
-    return <NodeLandingPage nodeId={rawNodeId} onNavigate={navigate} />
+    const rawNodeId = nodeMatch[1] ? decodeURIComponent(nodeMatch[1]).trim() : ''
+    return <Home onNavigate={navigate} initialNodeId={rawNodeId} />
   }
 
   // 2. Root Landing Page (or /#top)
@@ -114,13 +114,14 @@ export default function App() {
   const [currentPath, setCurrentPath] = useState(() => window.location.pathname || '/')
   const [adminUnlocked, setAdminUnlocked] = useState(isSiteUnlocked)
 
-  // Ensure public visitors scanning QR nodes or hitting /#top are never locked out
+  // Ensure public visitors scanning QR nodes or hitting public routes are never locked out
   useEffect(() => {
     const isPublicRoute =
       window.location.pathname.startsWith('/node') ||
       window.location.pathname === '/' ||
       window.location.pathname === '' ||
       window.location.hash.includes('top') ||
+      window.location.hash.includes('sites') ||
       window.location.hash.includes('download')
 
     if (isPublicRoute) {
@@ -146,7 +147,7 @@ export default function App() {
     }
   }, [])
 
-  // Scroll to top or anchor
+  // Scroll to anchor or top
   useEffect(() => {
     if (window.location.hash) {
       const targetEl = document.querySelector(window.location.hash)
@@ -155,7 +156,9 @@ export default function App() {
         return
       }
     }
-    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+    if (!currentPath.startsWith('/node')) {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+    }
   }, [currentPath])
 
   const navigate = (path) => {
