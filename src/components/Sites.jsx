@@ -87,9 +87,6 @@ export default function Sites({ initialNodeId }) {
   const [sites, setSites] = useState(FALLBACK_SITES)
   const [query, setQuery] = useState('')
   const [selectedSite, setSelectedSite] = useState(null)
-  const [activeNodeMarker, setActiveNodeMarker] = useState(initialNodeId || null)
-  const [scanOpen, setScanOpen] = useState(false)
-  const [qrValue, setQrValue] = useState('')
   const [showAll, setShowAll] = useState(false)
 
   useEffect(() => {
@@ -127,8 +124,6 @@ export default function Sites({ initialNodeId }) {
 
     const cleanNode = initialNodeId.replace(/^.*\/node\//, '').trim()
     if (!cleanNode) return
-
-    setActiveNodeMarker(cleanNode)
 
     async function resolveNodeToSite() {
       const cleanLower = cleanNode.toLowerCase()
@@ -240,64 +235,10 @@ export default function Sites({ initialNodeId }) {
               aria-label="Search heritage sites"
             />
           </label>
-          <button className="site-tool-btn" type="button" onClick={() => setScanOpen((isOpen) => !isOpen)}>
-            Scan QR
-          </button>
           <a className="site-tool-btn site-tool-secondary" href="mailto:hello@dharohar.app?subject=Propose%20a%20heritage%20site">
             Propose a site
           </a>
         </div>
-
-        {scanOpen && (
-          <div className="qr-demo reveal in">
-            <div>
-              <strong>QR lookup demo</strong>
-              <span>Enter a marker value to open its mapped site.</span>
-            </div>
-            <div className="qr-demo-form">
-              <input
-                value={qrValue}
-                onChange={(event) => setQrValue(event.target.value)}
-                placeholder="Try IIITS-0-KING or SITE-1-0"
-                aria-label="QR marker value"
-              />
-              <button
-                type="button"
-                onClick={async () => {
-                  if (scannedSite) {
-                    setSelectedSite(scannedSite)
-                    return
-                  }
-                  const clean = qrValue.trim().replace(/^.*\/node\//, '')
-                  if (!clean) return
-                  try {
-                    const res = await fetch(`/sites/scan/${encodeURIComponent(clean)}`)
-                    if (res.ok) {
-                      const data = await res.json()
-                      if (data.valid && data.site_id) {
-                        const m = sites.find((s) => s.id == data.site_id)
-                        setSelectedSite(
-                          m || {
-                            id: data.site_id,
-                            name: data.site_name,
-                            location: data.site_location || 'India',
-                            summary: data.summary || data.description || 'Mapped heritage site.',
-                            nodes_count: data.nodes_count || 5,
-                            guide_status: 'English active',
-                            qr_value: clean,
-                          }
-                        )
-                        setActiveNodeMarker(clean)
-                      }
-                    }
-                  } catch {}
-                }}
-              >
-                Open site
-              </button>
-            </div>
-          </div>
-        )}
 
         <div className="site-results-meta">
           <span>
@@ -378,26 +319,6 @@ export default function Sites({ initialNodeId }) {
             <div className="site-modal-header">
               <div className="eyebrow">Mapped site</div>
               <h3 id="site-modal-title">{selectedSite.name}</h3>
-              {activeNodeMarker && (
-                <div
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    background: 'rgba(156, 74, 44, 0.08)',
-                    color: '#9C4A2C',
-                    border: '1px solid rgba(156, 74, 44, 0.2)',
-                    padding: '4px 10px',
-                    borderRadius: '6px',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    marginTop: '8px',
-                  }}
-                >
-                  <span>📍 Scanned Checkpoint:</span>
-                  <code style={{ fontFamily: 'monospace' }}>{activeNodeMarker}</code>
-                </div>
-              )}
             </div>
 
             <div className="site-modal-body">
