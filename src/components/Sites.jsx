@@ -200,20 +200,7 @@ export default function Sites({ initialNodeId }) {
     return results.slice(0, INITIAL_LIMIT)
   }, [results, query, showAll])
 
-  const scannedSite = sites.find((site) => {
-    let clean = qrValue.trim().toLowerCase()
-    if (!clean) return false
-    clean = clean.replace(/^.*\/node\//, '')
-    const siteQr = (site.qr_value || '').toLowerCase()
-    const siteName = (site.name || '').toLowerCase()
-    return (
-      siteQr === clean ||
-      (clean.length > 2 && (siteQr.includes(clean) || clean.includes(siteQr))) ||
-      (clean.startsWith('iiit') && siteName.includes('iiit')) ||
-      (clean.startsWith('qmc') && siteName.includes('qutub')) ||
-      (site.id && clean === `site-${site.id}-0`.toLowerCase())
-    )
-  })
+
 
   return (
     <section className="sites" id="sites">
