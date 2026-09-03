@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from 'react'
+import { getAndroidDownloadUrl } from '../config/appConfig'
 
 const FALLBACK_SITES = [
   {
@@ -118,17 +119,73 @@ export default function Sites({ initialNodeId }) {
     fetchSites()
   }, [])
 
-  // Resolve deep-linked node (e.g. /node/IIITS-0-KING) to its mapped heritage site
-  useEffect(() => {
-    if (!initialNodeId) return
+  const [scannedNode, setScannedNode] = useState(null)
 
-    const cleanNode = initialNodeId.replace(/^.*\/node\//, '').trim()
+  // Resolve deep-linked node (e.g. /node/Q0v or /node/IIITS-0-KING) to its mapped heritage site
+  useEffect(() => {
+    const urlParam = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('node') : null
+    const targetNode = initialNodeId || urlParam
+    if (!targetNode) return
+
+    const cleanNode = String(targetNode).replace(/^.*\/node\//, '').trim()
     if (!cleanNode) return
+
+    // 1. Try launching mobile app if on a mobile phone
+    if (typeof window !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+      try {
+        window.location.href = `dharohar://node/${encodeURIComponent(cleanNode)}`
+      } catch {
+        // Continue to web fallback
+      }
+    }
 
     async function resolveNodeToSite() {
       const cleanLower = cleanNode.toLowerCase()
 
-      // 1. Check local loaded sites
+      // 2. Fetch authoritative node + site mapping from backend /sites/scan/:cleanNode
+      try {
+        const res = await fetch(`/sites/scan/${encodeURIComponent(cleanNode)}`)
+        if (res.ok) {
+          const scanData = await res.json()
+          if (scanData.valid && scanData.site_id) {
+            setScannedNode({
+              nodeName: scanData.node_name,
+              nodeCode: scanData.qr_code_value || cleanNode,
+              legacy: scanData.legacy_qr_code_value,
+              siteId: scanData.site_id,
+              siteName: scanData.site_name,
+            })
+
+            const matchedSite = sites.find(
+              (s) => s.id == scanData.site_id || String(s.id) === String(scanData.site_id)
+            )
+
+            if (matchedSite) {
+              setSelectedSite(matchedSite)
+            } else {
+              setSelectedSite({
+                id: scanData.site_id,
+                name: scanData.site_name || 'Mapped Heritage Site',
+                location: scanData.site_location || 'India',
+                summary: scanData.site_summary || scanData.summary || scanData.description || scanData.message || 'Mapped digital audio tour waypoint.',
+                nodes_count: scanData.site_nodes_count || scanData.nodes_count || 5,
+                guide_status: 'English active',
+                image: scanData.site_image_url || scanData.image_url || '/assets/app-preview-8.jpg',
+                qr_value: scanData.qr_code_value || cleanNode,
+              })
+            }
+
+            setTimeout(() => {
+              document.getElementById('sites')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            }, 120)
+            return
+          }
+        }
+      } catch (err) {
+        console.warn('Could not resolve scanned node marker via backend:', err)
+      }
+
+      // 3. Fallback: match against locally loaded sites list
       const localMatch = sites.find((s) => {
         const sQr = (s.qr_value || '').toLowerCase()
         const sName = (s.name || '').toLowerCase()
@@ -138,48 +195,22 @@ export default function Sites({ initialNodeId }) {
           cleanLower.includes(sQr) ||
           (cleanLower.startsWith('iiit') && sName.includes('iiit')) ||
           (cleanLower.startsWith('qmc') && sName.includes('qutub')) ||
+          (cleanLower.startsWith('qtb') && sName.includes('qutub')) ||
           (s.id && cleanLower.startsWith(`site-${s.id}`))
         )
       })
 
       if (localMatch) {
+        setScannedNode({
+          nodeName: 'Main Checkpoint',
+          nodeCode: cleanNode,
+          siteId: localMatch.id,
+          siteName: localMatch.name,
+        })
         setSelectedSite(localMatch)
         setTimeout(() => {
           document.getElementById('sites')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-        }, 150)
-        return
-      }
-
-      // 2. Fetch from backend /sites/scan/:cleanNode
-      try {
-        const res = await fetch(`/sites/scan/${encodeURIComponent(cleanNode)}`)
-        if (res.ok) {
-          const scanData = await res.json()
-          if (scanData.valid && scanData.site_id) {
-            const matchedSite = sites.find(
-              (s) => s.id == scanData.site_id || String(s.id) === String(scanData.site_id)
-            )
-            if (matchedSite) {
-              setSelectedSite(matchedSite)
-            } else {
-              setSelectedSite({
-                id: scanData.site_id,
-                name: scanData.site_name || 'Mapped Heritage Site',
-                location: scanData.site_location || 'India',
-                summary: scanData.summary || scanData.description || scanData.message || 'Mapped digital audio tour waypoint.',
-                nodes_count: scanData.nodes_count || 5,
-                guide_status: 'English active',
-                image: scanData.image_url || '/assets/app-preview-8.jpg',
-                qr_value: cleanNode,
-              })
-            }
-            setTimeout(() => {
-              document.getElementById('sites')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-            }, 150)
-          }
-        }
-      } catch (err) {
-        console.warn('Could not resolve scanned node marker:', err)
+        }, 120)
       }
     }
 
@@ -306,6 +337,27 @@ export default function Sites({ initialNodeId }) {
             <div className="site-modal-header">
               <div className="eyebrow">Mapped site</div>
               <h3 id="site-modal-title">{selectedSite.name}</h3>
+
+              {scannedNode && (
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: '#FBF4EC',
+                    border: '1px solid #E5D5C5',
+                    borderRadius: '6px',
+                    padding: '4px 10px',
+                    fontSize: '12.5px',
+                    color: '#9E3A14',
+                    fontWeight: 600,
+                    marginTop: '8px',
+                  }}
+                >
+                  📍 Scanned Waypoint: {scannedNode.nodeName || 'Waypoint'}
+                  <span style={{ fontFamily: 'monospace', opacity: 0.85 }}>({scannedNode.nodeCode})</span>
+                </div>
+              )}
             </div>
 
             <div className="site-modal-body">
@@ -319,12 +371,30 @@ export default function Sites({ initialNodeId }) {
                 <span>🎧 {selectedSite.guide_status || 'English active'}</span>
               </div>
               <a
-                href="https://github.com/constertine/dharohar-setu/releases/download/v0.1.0/app-debug.apk"
+                href={getAndroidDownloadUrl()}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="btn btn-primary"
                 style={{ width: '100%', textAlign: 'center', display: 'block', boxSizing: 'border-box' }}
               >
                 Download app to begin
               </a>
+              {scannedNode && (
+                <a
+                  href={`dharohar://node/${encodeURIComponent(scannedNode.nodeCode)}`}
+                  style={{
+                    display: 'block',
+                    textAlign: 'center',
+                    marginTop: '10px',
+                    fontSize: '12.5px',
+                    color: '#9E3A14',
+                    fontWeight: 600,
+                    textDecoration: 'underline',
+                  }}
+                >
+                  Already installed the app? Open Tour in App →
+                </a>
+              )}
             </div>
           </section>
         </div>

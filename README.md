@@ -125,6 +125,7 @@ The optimized production bundle will be generated in the `dist/` directory.
 
 To experience real-time GPS geofencing, QR scanner validation, and offline audio guides on-site at mapped monuments, download the companion **Dharohar Setu Android App**:
 
-- **Latest Release**: [Download APK on GitHub](https://github.com/constertine/dharohar-setu/releases)
+- **Latest Release (v0.2.0)**: [Download app-release.apk](https://github.com/constertine/dharohar-setu/releases/download/v.0.2.0/app-release.apk)
+- **Release Notes**: [GitHub Release v.0.2.0](https://github.com/constertine/dharohar-setu/releases/tag/v.0.2.0)
 
 ---

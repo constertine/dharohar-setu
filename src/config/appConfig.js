@@ -3,27 +3,33 @@
 // IMPORTANT: Never add backend credentials, API secrets, or private tokens here.
 
 export const ANDROID_PACKAGE_NAME =
-  import.meta.env.VITE_ANDROID_PACKAGE_NAME || 'com.example.humsafar'
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_ANDROID_PACKAGE_NAME) || 'com.example.humsafar'
 
-export const DEFAULT_PLAY_STORE_URL = `https://play.google.com/store/apps/details?id=${ANDROID_PACKAGE_NAME}`
+export const DEFAULT_RELEASE_TAG_URL =
+  'https://github.com/constertine/dharohar-setu/releases/tag/v.0.2.0'
+
+export const DEFAULT_APK_DOWNLOAD_URL =
+  'https://github.com/constertine/dharohar-setu/releases/download/v.0.2.0/app-release.apk'
+
+export const DEFAULT_PLAY_STORE_URL = DEFAULT_APK_DOWNLOAD_URL
 
 /**
  * Resolves the primary Android App download destination.
- * Controlled via VITE_ANDROID_DOWNLOAD_URL with fallback to the official Google Play Store URL.
+ * Controlled via VITE_ANDROID_DOWNLOAD_URL with fallback to the official GitHub Release APK.
  */
 export function getAndroidDownloadUrl() {
-  const customUrl = import.meta.env.VITE_ANDROID_DOWNLOAD_URL
+  const customUrl = typeof import.meta !== 'undefined' ? import.meta.env?.VITE_ANDROID_DOWNLOAD_URL : undefined
   if (customUrl && typeof customUrl === 'string' && customUrl.trim() !== '') {
     return customUrl.trim()
   }
-  return DEFAULT_PLAY_STORE_URL
+  return DEFAULT_APK_DOWNLOAD_URL
 }
 
 /**
  * Resolves the public canonical domain of the web application.
  */
 export function getPublicAppUrl() {
-  const envUrl = import.meta.env.VITE_PUBLIC_APP_URL
+  const envUrl = typeof import.meta !== 'undefined' ? import.meta.env?.VITE_PUBLIC_APP_URL : undefined
   if (envUrl && typeof envUrl === 'string' && envUrl.trim() !== '') {
     return envUrl.trim().replace(/\/$/, '')
   }

@@ -8,22 +8,30 @@ const router = express.Router()
 router.post('/start', async (req, res, next) => {
   try {
     const userId = (req.query.user_id || req.body.user_id || '').trim()
-    const qrValue = (req.query.qr_value || req.body.qr_value || '').trim()
+    let rawQr = (req.query.qr_value || req.body.qr_value || req.query.qr_code_value || req.body.qr_code_value || '').trim()
 
-    if (!qrValue) {
+    if (!rawQr) {
       return res.status(400).json({
         error: 'MissingQRCode',
         message: 'QR code marker value is required to start a trip.',
       })
     }
 
-    const [node] = await backendDb.$queryRaw`
+    const urlMatch = rawQr.match(/\/node\/([^/?#]+)/i)
+    if (urlMatch) {
+      rawQr = urlMatch[1].trim()
+    }
+    const cleanQr = String(rawQr).replace(/'/g, "''")
+
+    const [node] = await backendDb.$queryRawUnsafe(`
       SELECT n.*, s.name as site_name, s.location as site_location
       FROM nodes n
       JOIN heritage_sites s ON n.site_id = s.id
-      WHERE n.qr_code_value = ${qrValue}
+      WHERE n.qr_code_value = '${cleanQr}'
+         OR n.qr_code_value ILIKE '${cleanQr}'
+         OR (to_jsonb(n)->>'legacy_qr_code_value') ILIKE '${cleanQr}'
       LIMIT 1
-    `
+    `)
 
     const siteId = node ? node.site_id : 1
     const siteName = node ? node.site_name : 'Heritage Monument'

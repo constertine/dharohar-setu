@@ -67,6 +67,14 @@ app.use((req, res, next) => {
   next()
 })
 
+// Dedicated route for /node/:node_id (serves SPA or redirects to landing page)
+app.get('/node/:node_id', (req, res) => {
+  if (fs.existsSync(indexPath)) {
+    return res.sendFile(indexPath)
+  }
+  return res.redirect(`/#sites?node=${encodeURIComponent(req.params.node_id)}`)
+})
+
 // Serve Android App Links verification file
 app.get('/.well-known/assetlinks.json', (req, res) => {
   res.setHeader('Content-Type', 'application/json')

@@ -152,15 +152,34 @@ router.get('/nearby', async (req, res, next) => {
 // 2. GET /sites/scan/:qr_value (Validates QR code and returns site/node details)
 router.get('/scan/:qr_value', async (req, res, next) => {
   try {
-    const qrValue = decodeURIComponent(req.params.qr_value).trim()
+    let rawParam = decodeURIComponent(req.params.qr_value).trim()
+    const urlMatch = rawParam.match(/\/node\/([^/?#]+)/i)
+    if (urlMatch) {
+      rawParam = urlMatch[1].trim()
+    }
+    const qrValue = rawParam
 
     // 1. Try remote backend QR lookup
     const remoteScan = await remoteBackend.scanQr(qrValue)
     if (remoteScan.ok && remoteScan.data && (remoteScan.data.status === 'valid' || remoteScan.data.status === 'ok' || remoteScan.data.valid === true)) {
+      let enriched = { ...remoteScan.data }
+      if (enriched.site_id && !enriched.site_name) {
+        try {
+          const [sRow] = await backendDb.$queryRawUnsafe(`
+            SELECT s.name as site_name, s.location as site_location, s.summary as site_summary,
+                   (SELECT image_url FROM site_images si WHERE si.site_id = s.id LIMIT 1) as site_image_url,
+                   (SELECT COUNT(*)::int FROM nodes n WHERE n.site_id = s.id) as site_nodes_count
+            FROM heritage_sites s WHERE s.id = ${parseInt(enriched.site_id, 10)} LIMIT 1
+          `)
+          if (sRow) {
+            enriched = { ...enriched, ...sRow }
+          }
+        } catch {}
+      }
       return res.json({
         valid: true,
         status: 'valid',
-        ...remoteScan.data,
+        ...enriched,
       })
     }
 
@@ -214,29 +233,44 @@ router.get('/scan/:qr_value', async (req, res, next) => {
       })
     }
 
-    // 4. Lookup in backendDb (nodes table by qr_code_value)
+    // 4. Lookup in backendDb (nodes table by hashed qr_code_value or legacy_qr_code_value)
     try {
       const cleanQr = String(qrValue).replace(/'/g, "''")
       const [dbNode] = await backendDb.$queryRawUnsafe(`
-        SELECT n.*, s.name as site_name, s.location as site_location
+        SELECT n.*, s.name as site_name, s.location as site_location, s.summary as site_summary,
+               s.intro_video_url as site_video_url,
+               (SELECT image_url FROM site_images si WHERE si.site_id = s.id LIMIT 1) as site_image_url,
+               to_jsonb(n)->>'legacy_qr_code_value' as legacy_qr_code_value,
+               (SELECT COUNT(*)::int FROM nodes n2 WHERE n2.site_id = s.id) as site_nodes_count
         FROM nodes n
         JOIN heritage_sites s ON s.id = n.site_id
-        WHERE n.qr_code_value ILIKE '${cleanQr}'
+        WHERE n.qr_code_value = '${cleanQr}'
+           OR n.qr_code_value ILIKE '${cleanQr}'
+           OR (to_jsonb(n)->>'legacy_qr_code_value') ILIKE '${cleanQr}'
         LIMIT 1
       `)
       if (dbNode) {
+        const nodeQr = dbNode.qr_code_value || cleanQr
         return res.json({
           valid: true,
           status: 'valid',
           type: dbNode.is_king ? 'site_entry' : 'node_waypoint',
           site_id: dbNode.site_id,
           site_name: dbNode.site_name,
+          site_location: dbNode.site_location,
+          site_summary: dbNode.site_summary,
+          site_image_url: dbNode.site_image_url,
+          site_nodes_count: dbNode.site_nodes_count || 1,
           node_id: dbNode.id,
           node_name: dbNode.name,
           node_type: dbNode.is_king ? 'king' : 'standard',
           sequence_order: dbNode.sequence_order,
+          qr_code_value: nodeQr,
+          legacy_qr_code_value: dbNode.legacy_qr_code_value,
           description: dbNode.description,
           video_url: dbNode.video_url,
+          app_deep_link: `dharohar://node/${encodeURIComponent(nodeQr)}`,
+          qr_url: `https://dharohar-setu.onrender.com/node/${encodeURIComponent(nodeQr)}`,
           message: `Welcome to ${dbNode.site_name}. ${dbNode.is_king ? 'Entry King QR marker validated.' : 'Node verified: ' + dbNode.name}`,
         })
       }
