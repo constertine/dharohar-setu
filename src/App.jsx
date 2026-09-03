@@ -7,7 +7,6 @@ import SiteLockScreen, { isSiteUnlocked } from './components/SiteLockScreen'
 
 // Public Pages
 import Home from './pages/Home'
-import NotFoundPage from './pages/NotFoundPage'
 
 // Admin Flow Pages
 import AdminLogin from './pages/AdminLogin'
@@ -189,5 +188,27 @@ export default function App() {
         <AppRouter currentPath={currentPath} navigate={navigate} />
       </ToastProvider>
     </AuthProvider>
+  )
+}
+
+function NotFoundPage({ onNavigate }) {
+  return (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '24px', background: '#FAF6EF' }}>
+      <div style={{ maxWidth: '420px' }}>
+        <h1 style={{ fontSize: '3.5rem', margin: 0, color: '#9E3A14', fontFamily: 'Fraunces, serif' }}>404</h1>
+        <h2 style={{ fontSize: '1.25rem', marginTop: '8px', color: '#1B140E' }}>Page Not Found</h2>
+        <p style={{ color: '#665C54', marginTop: '8px', lineHeight: 1.5 }}>
+          The requested waypoint or dashboard route does not exist.
+        </p>
+        <button
+          type="button"
+          onClick={() => (onNavigate ? onNavigate('/') : (window.location.href = '/'))}
+          className="btn btn-primary"
+          style={{ marginTop: '20px', padding: '10px 24px', cursor: 'pointer', border: 'none', borderRadius: '8px', background: '#9E3A14', color: '#fff', fontWeight: 600 }}
+        >
+          Return to Dharohar Setu
+        </button>
+      </div>
+    </div>
   )
 }

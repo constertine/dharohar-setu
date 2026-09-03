@@ -24,7 +24,39 @@
       "destination": "/.well-known/assetlinks.json"
     },
     {
-      "source": "/node/:path*",
+      "source": "/sites/:path*",
+      "destination": "https://dharohar-setu.onrender.com/sites/:path*"
+    },
+    {
+      "source": "/sites",
+      "destination": "https://dharohar-setu.onrender.com/sites"
+    },
+    {
+      "source": "/trips/:path*",
+      "destination": "https://dharohar-setu.onrender.com/trips/:path*"
+    },
+    {
+      "source": "/trips",
+      "destination": "https://dharohar-setu.onrender.com/trips"
+    },
+    {
+      "source": "/reviews/:path*",
+      "destination": "https://dharohar-setu.onrender.com/reviews/:path*"
+    },
+    {
+      "source": "/reviews",
+      "destination": "https://dharohar-setu.onrender.com/reviews"
+    },
+    {
+      "source": "/api/:path*",
+      "destination": "https://dharohar-setu.onrender.com/api/:path*"
+    },
+    {
+      "source": "/admin/:path*",
+      "destination": "https://dharohar-setu.onrender.com/admin/:path*"
+    },
+    {
+      "source": "/((?!assets/|favicon.png|.*\\..*).*)",
       "destination": "/index.html"
     }
   ]
