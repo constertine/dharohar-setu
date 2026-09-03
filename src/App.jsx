@@ -2,8 +2,6 @@ import { useState, useEffect } from 'react'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ToastProvider } from './context/ToastContext'
 
-// Site-Wide Gatekeeper Passcode Lock (for admin portal)
-import SiteLockScreen, { isSiteUnlocked } from './components/SiteLockScreen'
 
 // Public Pages
 import Home from './pages/Home'
@@ -111,27 +109,6 @@ function AppRouter({ currentPath, navigate }) {
 
 export default function App() {
   const [currentPath, setCurrentPath] = useState(() => window.location.pathname || '/')
-  const [adminUnlocked, setAdminUnlocked] = useState(isSiteUnlocked)
-
-  // Ensure public visitors scanning QR nodes or hitting public routes are never locked out
-  useEffect(() => {
-    const isPublicRoute =
-      window.location.pathname.startsWith('/node') ||
-      window.location.pathname === '/' ||
-      window.location.pathname === '' ||
-      window.location.hash.includes('top') ||
-      window.location.hash.includes('sites') ||
-      window.location.hash.includes('download')
-
-    if (isPublicRoute) {
-      try {
-        localStorage.setItem('dharohar_site_passcode_unlocked', 'true')
-        setAdminUnlocked(true)
-      } catch (err) {
-        console.warn('Storage warning:', err)
-      }
-    }
-  }, [currentPath])
 
   // Listen to browser back/forward and hash navigation
   useEffect(() => {
@@ -173,13 +150,6 @@ export default function App() {
     }
     window.history.pushState({}, '', path)
     setCurrentPath(path)
-  }
-
-  const isAdminRoute = currentPath.startsWith('/admin') || currentPath === '/admin-login'
-
-  // Passcode lock screen is ONLY used for protected /admin routes
-  if (isAdminRoute && !adminUnlocked) {
-    return <SiteLockScreen onUnlock={() => setAdminUnlocked(true)} />
   }
 
   return (
