@@ -176,6 +176,8 @@ router.get('/scan/:qr_value', async (req, res, next) => {
           }
         } catch {}
       }
+      enriched.qr_url = `https://dharohar-setu.vercel.app/node/${encodeURIComponent(qrValue)}`
+      enriched.app_deep_link = `dharohar://node/${encodeURIComponent(qrValue)}`
       return res.json({
         valid: true,
         status: 'valid',
@@ -270,7 +272,7 @@ router.get('/scan/:qr_value', async (req, res, next) => {
           description: dbNode.description,
           video_url: dbNode.video_url,
           app_deep_link: `dharohar://node/${encodeURIComponent(nodeQr)}`,
-          qr_url: `https://dharohar-setu.onrender.com/node/${encodeURIComponent(nodeQr)}`,
+          qr_url: `https://dharohar-setu.vercel.app/node/${encodeURIComponent(nodeQr)}`,
           message: `Welcome to ${dbNode.site_name}. ${dbNode.is_king ? 'Entry King QR marker validated.' : 'Node verified: ' + dbNode.name}`,
         })
       }

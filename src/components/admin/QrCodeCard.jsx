@@ -19,7 +19,7 @@ export default function QrCodeCard({
   const nodeCode = String(value || '').trim()
   const qrUrl = nodeCode.startsWith('http://') || nodeCode.startsWith('https://')
     ? nodeCode
-    : `https://dharohar-setu.onrender.com/node/${encodeURIComponent(nodeCode)}`
+    : `https://dharohar-setu.vercel.app/node/${encodeURIComponent(nodeCode)}`
 
   useEffect(() => {
     if (!qrUrl || !canvasRef.current) return
@@ -129,7 +129,7 @@ export default function QrCodeCard({
     ctx.font = '20px sans-serif'
     ctx.fillText('Scan with Google Lens or Dharohar App to trigger location audio & tour', 400, 895)
     ctx.font = '16px sans-serif'
-    ctx.fillText('dharohar-setu.onrender.com • Ministry of Tourism & Culture', 400, 928)
+    ctx.fillText('dharohar-setu.vercel.app • Ministry of Tourism & Culture', 400, 928)
 
     // Download image
     const link = document.createElement('a')
