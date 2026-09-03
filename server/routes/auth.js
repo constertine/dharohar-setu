@@ -2,11 +2,36 @@ import express from 'express'
 import crypto from 'crypto'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
+import rateLimit from 'express-rate-limit'
 import prisma from '../db/prisma.js'
 import config from '../config.js'
 import { authenticateToken } from '../middleware/auth.js'
 
 const router = express.Router()
+
+// Brute-force protection: Max 15 login attempts per 15 minutes per IP
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 15,
+  message: {
+    error: 'TooManyRequests',
+    message: 'Too many sign-in attempts from this IP. Please try again after 15 minutes.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+})
+
+// Password reset limiter: Max 5 attempts per 15 minutes per IP
+const passwordResetLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: {
+    error: 'TooManyRequests',
+    message: 'Too many password reset requests from this IP. Please try again after 15 minutes.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+})
 
 // Helper: Generate JWT token for admin session
 function generateAdminToken(user) {
@@ -24,8 +49,8 @@ function generateAdminToken(user) {
   )
 }
 
-// 1. POST /api/auth/login (Admin / Super Admin login)
-router.post('/login', async (req, res, next) => {
+// 1. POST /api/auth/login (Admin / Super Admin login with brute-force protection)
+router.post('/login', loginLimiter, async (req, res, next) => {
   try {
     const { email, password } = req.body
 
@@ -237,8 +262,8 @@ router.post('/change-password', authenticateToken, async (req, res, next) => {
   }
 })
 
-// 5. POST /api/auth/forgot-password
-router.post('/forgot-password', async (req, res, next) => {
+// 5. POST /api/auth/forgot-password (with rate limiting)
+router.post('/forgot-password', passwordResetLimiter, async (req, res, next) => {
   try {
     const { email } = req.body
 

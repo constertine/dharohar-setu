@@ -123,8 +123,8 @@ const handleSeedPrompt = async (req, res, next) => {
   }
 }
 
-router.post('/admin/seed-prompt', handleSeedPrompt)
-router.post('/seed-prompt', handleSeedPrompt)
+router.post('/admin/seed-prompt', authenticateToken, requireAdmin, handleSeedPrompt)
+router.post('/seed-prompt', authenticateToken, requireAdmin, handleSeedPrompt)
 
 // 4. POST /admin/seed-bulk & /seed-bulk
 const handleSeedBulk = async (req, res, next) => {
@@ -208,7 +208,7 @@ const handleSeedBulk = async (req, res, next) => {
   }
 }
 
-router.post('/admin/seed-bulk', handleSeedBulk)
-router.post('/seed-bulk', handleSeedBulk)
+router.post('/admin/seed-bulk', authenticateToken, requireAdmin, handleSeedBulk)
+router.post('/seed-bulk', authenticateToken, requireAdmin, handleSeedBulk)
 
 export default router

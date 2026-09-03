@@ -1,11 +1,24 @@
 import express from 'express'
+import rateLimit from 'express-rate-limit'
 import backendDb from '../db/backendDb.js'
 import { authenticateToken, requireAdmin } from '../middleware/auth.js'
 
 const router = express.Router()
 
-// 1. POST /reviews/submit
-router.post('/submit', async (req, res, next) => {
+// Anti-spam review submit rate limiter: max 20 reviews per hour per IP
+const reviewSubmitLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 20,
+  message: {
+    error: 'TooManyRequests',
+    message: 'Review submission limit reached. Please try again later.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+})
+
+// 1. POST /reviews/submit (with anti-spam rate limiting)
+router.post('/submit', reviewSubmitLimiter, async (req, res, next) => {
   try {
     const { site_id, user_id, rating, q1_clarity, q2_accessibility, q3_overall, comment } = req.body
     return res.status(201).json({
@@ -138,7 +151,10 @@ router.get('/', authenticateToken, requireAdmin, async (req, res, next) => {
     `
 
     if (site_id && site_id !== 'all') {
-      query += ` AND r.site_id = ${parseInt(site_id, 10)}`
+      const sId = parseInt(site_id, 10)
+      if (!isNaN(sId)) {
+        query += ` AND r.site_id = ${sId}`
+      }
     }
 
     if (search) {
