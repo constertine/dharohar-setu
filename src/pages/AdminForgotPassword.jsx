@@ -105,7 +105,6 @@ export default function AdminForgotPassword({ onNavigate }) {
               <input
                 id="reset-email"
                 type="email"
-                placeholder="admin@dharohar.app"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required

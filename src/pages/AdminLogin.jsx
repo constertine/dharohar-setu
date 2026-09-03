@@ -68,7 +68,6 @@ export default function AdminLogin({ onNavigate }) {
               id="admin-email"
               type="email"
               className="form-input"
-              placeholder="e.g. dharoharsetu@gmail.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
