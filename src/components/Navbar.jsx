@@ -6,6 +6,14 @@ export default function Navbar({ onNavigate }) {
   const closeMenu = () => setMenuOpen(false)
   const downloadUrl = getAndroidDownloadUrl()
 
+  const handleAnchorClick = (hash) => (e) => {
+    closeMenu()
+    if (onNavigate && window.location.pathname !== '/') {
+      e.preventDefault()
+      onNavigate(hash)
+    }
+  }
+
   return (
     <header className="nav">
       <div className="nav-inner">
@@ -32,9 +40,9 @@ export default function Navbar({ onNavigate }) {
           {menuOpen ? 'Close' : 'Menu'}
         </button>
         <nav className={`navlinks ${menuOpen ? 'open' : ''}`} id="main-navigation">
-          <a href="#how" onClick={closeMenu}>How it works</a>
-          <a href="#features" onClick={closeMenu}>Features</a>
-          <a href="#sites" onClick={closeMenu}>Heritage sites</a>
+          <a href="#how" onClick={handleAnchorClick('#how')}>How it works</a>
+          <a href="#features" onClick={handleAnchorClick('#features')}>Features</a>
+          <a href="#sites" onClick={handleAnchorClick('#sites')}>Heritage sites</a>
           <a
             href={downloadUrl}
             target="_blank"

@@ -90,11 +90,41 @@ const FALLBACK_SITES = [
 
 const INITIAL_LIMIT = 2
 
-export default function Sites({ initialNodeId }) {
+export default function Sites({ initialNodeId, onNavigate }) {
   const [sites, setSites] = useState(FALLBACK_SITES)
   const [query, setQuery] = useState('')
   const [selectedSite, setSelectedSite] = useState(null)
   const [showAll, setShowAll] = useState(false)
+
+  const handleCloseModal = () => {
+    setSelectedSite(null)
+    setScannedNode(null)
+
+    // Ensure all reveal elements are visible
+    if (typeof document !== 'undefined') {
+      document.querySelectorAll('.reveal').forEach((el) => el.classList.add('in'))
+    }
+
+    // When closing from a deep-linked /node/:id URL, switch URL and router state to root '/'
+    if (typeof window !== 'undefined' && window.location.pathname.startsWith('/node')) {
+      if (onNavigate) {
+        onNavigate('/')
+      } else {
+        window.history.pushState({}, '', '/')
+      }
+    }
+  }
+
+  // Handle Escape key to close modal
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && selectedSite) {
+        handleCloseModal()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [selectedSite, onNavigate])
 
   useEffect(() => {
     async function fetchSites() {
@@ -329,7 +359,7 @@ export default function Sites({ initialNodeId }) {
       </div>
 
       {selectedSite && (
-        <div className="site-modal-backdrop" role="presentation" onMouseDown={() => setSelectedSite(null)}>
+        <div className="site-modal-backdrop" role="presentation" onMouseDown={handleCloseModal}>
           <section
             className="site-modal"
             role="dialog"
@@ -337,7 +367,7 @@ export default function Sites({ initialNodeId }) {
             aria-labelledby="site-modal-title"
             onMouseDown={(event) => event.stopPropagation()}
           >
-            <button className="modal-close" type="button" onClick={() => setSelectedSite(null)} aria-label="Close site details">
+            <button className="modal-close" type="button" onClick={handleCloseModal} aria-label="Close site details">
               ×
             </button>
             <div className="site-modal-header">
@@ -361,7 +391,6 @@ export default function Sites({ initialNodeId }) {
                   }}
                 >
                   📍 Scanned Waypoint: {scannedNode.nodeName || 'Waypoint'}
-                  <span style={{ fontFamily: 'monospace', opacity: 0.85 }}>({scannedNode.nodeCode})</span>
                 </div>
               )}
             </div>

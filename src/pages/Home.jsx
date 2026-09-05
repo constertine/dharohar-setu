@@ -22,6 +22,10 @@ export default function Home({ onNavigate, initialNodeId }) {
 
     // 2. Setup IntersectionObserver for reveal animations on fresh mount
     const revealEls = document.querySelectorAll('.reveal')
+    if (initialNodeId) {
+      // If arriving directly at #sites via a QR scan deep link, ensure all sections render visible
+      revealEls.forEach((el) => el.classList.add('in'))
+    }
     const io = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
@@ -51,7 +55,7 @@ export default function Home({ onNavigate, initialNodeId }) {
         <Hero onNavigate={onNavigate} />
         <HowItWorks />
         <Features />
-        <Sites initialNodeId={initialNodeId} />
+        <Sites initialNodeId={initialNodeId} onNavigate={onNavigate} />
         <WhyDharohar />
         <CTA onNavigate={onNavigate} />
       </main>

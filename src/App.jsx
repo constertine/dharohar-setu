@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ToastProvider } from './context/ToastContext'
 
@@ -123,6 +123,8 @@ export default function App() {
     }
   }, [])
 
+  const prevPathRef = useRef(currentPath)
+
   // Scroll to anchor or top
   useEffect(() => {
     if (window.location.hash) {
@@ -132,7 +134,12 @@ export default function App() {
         return
       }
     }
-    if (!currentPath.startsWith('/node')) {
+
+    const wasNodeRoute = prevPathRef.current && prevPathRef.current.startsWith('/node')
+    prevPathRef.current = currentPath
+
+    // If closing modal from /node/:id to '/', stay smoothly at the current scroll position (#sites)
+    if (!currentPath.startsWith('/node') && !(wasNodeRoute && currentPath === '/')) {
       window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
     }
   }, [currentPath])
